@@ -19,7 +19,7 @@
     },
     {
       "name": "Stack test",
-      "working_dir": "${project_path}/aeson-injector",
+      "working_dir": "${project_path}",
       "shell_cmd": "stack test"    
     },
   ],
