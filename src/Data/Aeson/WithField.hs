@@ -81,25 +81,25 @@ type WithId i a = WithField "id" i a
 -- > { "id": 0, "value": [1, 2, 3] }
 instance (KnownSymbol s, ToJSON a, ToJSON b) => ToJSON (WithField s a b) where 
   toJSON (WithField a b) = let
-    json = toJSON b 
+    jsonb = toJSON b 
     field = T.pack $ symbolVal (Proxy :: Proxy s)
     in case toJSON b of 
       Object vs -> Object $ H.insert field (toJSON a) vs 
       _ -> object [
           field .= a 
-        , "value" .= json
+        , "value" .= jsonb
         ]
 
 -- | Note: the instance tries to parse the json as object with 
 -- additional field value, if it fails it assumes that it is a
 -- wrapper produced by corresponding 'ToJSON' instance.
 instance (KnownSymbol s, FromJSON a, FromJSON b) => FromJSON (WithField s a b) where 
-  parseJSON json@(Object o) = injected <|> wrapper 
+  parseJSON val@(Object o) = injected <|> wrapper 
     where 
     field = T.pack $ symbolVal (Proxy :: Proxy s)
     injected = WithField 
       <$> o .: field
-      <*> parseJSON json
+      <*> parseJSON val
     wrapper = WithField 
       <$> o .: field
       <*> o .: "value"
@@ -109,7 +109,7 @@ instance (KnownSymbol s, FromJSON a, FromJSON b) => FromJSON (WithField s a b) w
 -- additional field value, if it fails it assumes that it is a
 -- wrapper produced by corresponding 'ToJSON' instance.
 instance (KnownSymbol s, ToSchema a, ToSchema b) => ToSchema (WithField s a b) where 
-  declareNamedSchema prx = do 
+  declareNamedSchema _ = do 
     NamedSchema n s <- declareNamedSchema (Proxy :: Proxy b)
     if s ^. type_ == SwaggerObject then inline n s 
       else wrapper n s
@@ -182,18 +182,18 @@ instance (ToJSON a, ToJSON b) => ToJSON (WithFields a b) where
 -- additional field value, if it fails it assumes that it is a
 -- wrapper produced by corresponding 'ToJSON' instance.
 instance (FromJSON a, FromJSON b) => FromJSON (WithFields a b) where 
-  parseJSON json@(Object o) = WithFields
-    <$> (parseJSON json <|> o .: "injected")
-    <*> (parseJSON json <|> o .: "value")
+  parseJSON val@(Object o) = WithFields
+    <$> (parseJSON val <|> o .: "injected")
+    <*> (parseJSON val <|> o .: "value")
   parseJSON _ = mzero
 
 -- | Note: the instance tries to generate schema of the json as object with 
 -- additional field value, if it fails it assumes that it is a
 -- wrapper produced by corresponding 'ToJSON' instance.
 instance (ToSchema a, ToSchema b) => ToSchema (WithFields a b) where 
-  declareNamedSchema prx = do 
-    nbs@(NamedSchema nb sb) <- declareNamedSchema (Proxy :: Proxy b)
-    nas@(NamedSchema na sa) <- declareNamedSchema (Proxy :: Proxy a)
+  declareNamedSchema _ = do 
+    NamedSchema nb sb <- declareNamedSchema (Proxy :: Proxy b)
+    NamedSchema na sa <- declareNamedSchema (Proxy :: Proxy a)
     let newName = combinedName <$> na <*> nb
     return . NamedSchema newName $ case (sa ^. type_ , sb ^. type_) of 
       (SwaggerObject, SwaggerObject) -> sa <> sb 
