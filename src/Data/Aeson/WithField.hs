@@ -22,6 +22,131 @@ fields attached to the response.
 
 The module provides you with 'WithField' and 'WithFields' data types that
 help you to solve the issue without code duplication. 
+
+It is small utility library that is intented to be used in RESTful APIs, 
+especially with <http://haskell-servant.readthedocs.io/en/stable/ servant> 
+and <http://swagger.io/ Swagger>. Its main purpose is simple injection of 
+fields into JSONs produced by <https://hackage.haskell.org/package/aeson aeson> 
+library.
+
+Consider the following common data type in web service developing:
+
+@
+data News = News {
+  title :: Text
+, body :: Text
+, author :: Text
+, timestamp :: UTCTime  
+}
+
+-- Consider we have simple 'ToJSON' and 'FromJSON' instances
+$(deriveJSON defaultOptions ''News) 
+@
+
+'ToJSON' instance produces JSON's like:
+
+@
+{
+  "title": "Awesome piece of news!"
+, "body": "Big chunk of text"
+, "author": "Just Me"
+, "timestamp": "2016-07-26T18:54:42.678999Z"
+}
+@
+
+Now one can create a simple web server with servant DSL:
+
+> type NewsId = Word 
+> 
+> type NewsAPI = 
+>        ReqBody '[JSON] News :> Post '[JSON] NewsId
+>   :<|> Capture "news-id" NewsId :> Get '[JSON] News
+>   :<|> "list" :> Get '[JSON] [News]
+
+
+All seems legit, but, wait a second, an API user definitely would 
+like to know id of news in the "list" method. One way to do this is declare 
+new data type @NewsInfo@ with additional field, but it is bad solution as requires 
+to code duplication for each resource. 
+
+So, here @aeson-injector@ steps in, now you can write:
+
+> type NewsAPI = 
+>        ReqBody '[JSON] News :> Post '[JSON] NewsId
+>   :<|> Capture "news-id" NewsId :> Get '[JSON] News
+>   :<|> "list" :> Get '[JSON] [WithField "id" NewsId News]
+
+@'WithField' "id" NewsId News@ or simply @'WithId' NewsId News@ wraps you data type 
+and injects "id" field in produced JSON values:
+
+>>> encode (WithField 42 myNews :: WithField "id" NewsId News)
+
+> {
+>   "id": 42
+> , "title": "Awesome piece of news!"
+> , "body": "Big chunk of text"
+> , "author": "Just Me"
+> , "timestamp": "2016-07-26T18:54:42.678999Z"
+> }
+
+'WithField' data type has `FromJSON` instance for seamless parsing of data with 
+injected fields and 'ToSchema' instance for <https://hackage.haskell.org/package/servant-swagger servant-swagger> support.
+
+= Injecting multiple values
+
+The library also has more general data type 'WithFields a b' that injects fields of 'toJSON a' into 'toJSON b'. 
+
+@ haskell
+data NewsPatch = NewsPatch {
+  taggs :: [Text]
+, rating :: Double
+}
+$(deriveJSON defaultOptions ''NewsPatch) 
+@
+
+@ haskell
+let myNewsPatch = NewsPatch ["tag1", "tag2"] 42 
+in encode $ WithFields myNewsPatch myNews
+@
+
+> {
+>   "title": "Awesome piece of news!"
+> , "body": "Big chunk of text"
+> , "author": "Just Me"
+> , "timestamp": "2016-07-26T18:54:42.678999Z"
+> , "tags": ["tag1", "tag2"]
+> , "rating": 42.0
+> }
+
+= Corner cases
+
+Unfortunately, we cannot inject in non object values of produced JSON, 
+so the library creates a wrapper object around non-object value:
+
+@
+encode (WithId 0 "non-object" :: WithId Int String)
+@
+
+@
+{
+  "id": 0 
+, "value": "non-object"
+}
+@
+
+The same story is about 'WithFields' data type:
+
+@
+encode (WithFields 0 "non-object" :: WithFields Int String)
+@
+
+@
+{
+  "injected": 0 
+, "value": "non-object"
+}
+@
+
 -}
 module Data.Aeson.WithField(
   -- * Single field injector
