@@ -1,7 +1,7 @@
 name:                aeson-injector
-version:             1.0.0.0
+version:             1.0.0.1
 synopsis:            Injecting fields into aeson values
-description:         See Readme.md
+description:         See README.md
 license:             MIT
 license-file:        LICENSE
 author:              Anton Gushcha 
@@ -14,6 +14,8 @@ tested-with:
     GHC == 7.10.3
   , GHC == 8.0.1
   , GHC == 8.0.2
+extra-source-files:
+  README.md 
 
 source-repository head
   type: git
