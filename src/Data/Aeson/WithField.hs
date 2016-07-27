@@ -161,6 +161,7 @@ import Control.DeepSeq
 import Control.Lens hiding ((.=))
 import Control.Monad 
 import Data.Aeson 
+import Data.Bifunctor
 import Data.Monoid 
 import Data.Proxy 
 import Data.Swagger 
@@ -189,6 +190,12 @@ data WithField (s :: Symbol) a b = WithField !a !b
   deriving (Generic, Eq, Show, Read)
 
 instance (NFData a, NFData b) => NFData (WithField s a b)
+
+instance Functor (WithField s a) where 
+  fmap f (WithField a b) = WithField a (f b)
+
+instance Bifunctor (WithField s) where 
+  bimap fa fb (WithField a b) = WithField (fa a) (fb b)
 
 -- | Workaround for a problem that is discribed as:
 -- sometimes I need a id with the data, sometimes not.
@@ -270,6 +277,13 @@ data WithFields a b = WithFields !a !b
   deriving (Generic, Eq, Show, Read)
 
 instance (NFData a, NFData b) => NFData (WithFields a b)
+
+instance Functor (WithFields a) where 
+  fmap f (WithFields a b) = WithFields a (f b)
+
+instance Bifunctor WithFields where 
+  bimap fa fb (WithFields a b) = WithFields (fa a) (fb b)
+
 
 -- | Note: the instance injects field only in 'Object' case.
 -- In other cases it forms a wrapper around the 'Value' produced 
