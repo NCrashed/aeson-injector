@@ -154,14 +154,16 @@ module Data.Aeson.WithField(
   , WithId
   -- * Multiple fields injector
   , WithFields(..)
+  -- * Single field wrapper
+  , OnlyField(..)
+  , OnlyId
   ) where 
 
 import Control.Applicative
 import Control.DeepSeq
 import Control.Lens hiding ((.=))
 import Control.Monad 
-import Data.Aeson 
-import Data.Bifunctor
+import Data.Aeson
 import Data.Monoid 
 import Data.Proxy 
 import Data.Swagger 
@@ -349,4 +351,45 @@ instance (ToSchema a, ToSchema b) => ToSchema (WithFields a b) where
       & type_ .~ SwaggerObject
       & properties .~ [ ("value", Inline nbs) ]
       & required .~ [ "value" ]
-  
+
+-- | Special case, when you want to wrap your type @a@ in field with name @s@.
+--
+-- >>> encode (OnlyField 0 :: OnlyField "id" Int)
+-- "{\"id\":0}"
+--
+-- >>> encode $ toSchema (Proxy :: Proxy (OnlyField "id" Int))
+-- "{\"required\":[\"id\"],\"type\":\"object\",\"properties\":{\"id\":{\"maximum\":9223372036854775807,\"minimum\":-9223372036854775808,\"type\":\"integer\"}}}"
+--
+-- Also the type can be used as an endpoint for 'WithField':
+-- 
+-- >>> encode (WithField True (OnlyField 0) :: WithField "val" Bool (OnlyField "id" Int))
+-- "{\"id\":0,\"val\":true}"
+newtype OnlyField (s :: Symbol) a = OnlyField { unOnlyField :: a }
+  deriving (Generic, Show, Read, Eq)
+
+-- | Special case for the most common "id" field
+type OnlyId i = OnlyField "id" i 
+
+instance Functor (OnlyField s) where 
+  fmap f (OnlyField a) = OnlyField (f a)
+
+instance (KnownSymbol s, ToJSON a) => ToJSON (OnlyField s a) where 
+  toJSON (OnlyField a) = object [ field .= a ]
+    where 
+    field = T.pack $ symbolVal (Proxy :: Proxy s)
+
+instance (KnownSymbol s, FromJSON a) => FromJSON (OnlyField s a) where 
+  parseJSON (Object o) = OnlyField <$> o .: field 
+    where 
+    field = T.pack $ symbolVal (Proxy :: Proxy s)
+  parseJSON _ = mzero 
+
+instance (KnownSymbol s, ToSchema a) => ToSchema (OnlyField s a) where 
+  declareNamedSchema _ = do
+    NamedSchema an as <- declareNamedSchema (Proxy :: Proxy a)
+    return $ NamedSchema (fmap ("OnlyField" <>) an) $ mempty 
+      & type_ .~ SwaggerObject
+      & properties .~ [(field, Inline as)]
+      & required .~ [field]
+    where 
+    field = T.pack $ symbolVal (Proxy :: Proxy s)

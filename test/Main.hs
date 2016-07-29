@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances #-}
 module Main where
 
 import Control.Lens hiding ((.=))
@@ -23,6 +24,9 @@ instance (Arbitrary a, Arbitrary b) => Arbitrary (WithField s a b) where
 instance (Arbitrary a, Arbitrary b) => Arbitrary (WithFields a b) where 
   arbitrary = WithFields <$> arbitrary <*> arbitrary
 
+instance Arbitrary a => Arbitrary (OnlyField s a) where 
+  arbitrary = OnlyField <$> arbitrary
+
 main :: IO ()
 main = defaultMain tests
 
@@ -33,12 +37,14 @@ qcProperties :: TestTree
 qcProperties = testGroup "Properties" [
     withFieldProps
   , withFieldsProps
+  , onlyFieldProps
   ]
 
 unitTests :: TestTree 
 unitTests = testGroup "Unit tests" [
     withFieldTests
   , withFieldsTests
+  , onlyFieldTests
   ]
 
 data TestObj = TestObj !Text 
@@ -280,6 +286,34 @@ withFieldsTests = testGroup "WithFields tests" [
         expected @=? (actual ^. properties)
     ]
 
+onlyFieldTests :: TestTree
+onlyFieldTests = testGroup "OnlyField tests" [
+    testsToJSON
+  , testsFromJSON
+  , testsToSchema
+  ]
+  where 
+  testsToJSON = testGroup "toJSON" [
+      testCase "Normal mode" $ do 
+        let expected = object [ "a" .= (42 :: Int) ]
+        let actual = toJSON (OnlyField 42 :: OnlyField "a" Int)
+        expected @=? actual
+    ]
+  testsFromJSON = testGroup "FromJSON" [
+      testCase "Normal mode" $ do 
+        let expected = OnlyField 42 :: OnlyField "a" Int
+        let (A.Success (actual :: OnlyField "a" Int)) = fromJSON $ object [ 
+              "a" .= (42 :: Int) ]
+        expected @=? actual
+    ]
+  testsToSchema = testGroup "ToSchema" [
+      testCase "Normal mode" $ do 
+        let expected = [
+                ("a", Inline $ toSchema (Proxy :: Proxy Int)) ]
+        let actual = toSchema (Proxy :: Proxy (OnlyField "a" Int))
+        expected @=? (actual ^. properties)
+    ]
+
 withFieldProps :: TestTree
 withFieldProps = testGroup "withField properties" [
     functorProps
@@ -301,3 +335,11 @@ withFieldsProps = testGroup "withFields properties" [
       fmap id wf == wf 
     bifunctorProps = QC.testProperty "bimap id id == id" $  \(wf :: WithFields TestObj1 TestObj2) -> 
       bimap id id wf == wf 
+
+onlyFieldProps :: TestTree 
+onlyFieldProps = testGroup "onlyField properties" [
+    functorProps
+  ]
+  where 
+    functorProps = QC.testProperty "fmap id  ==  id" $  \(wf :: OnlyField "id" TestObj) -> 
+      fmap id wf == wf
