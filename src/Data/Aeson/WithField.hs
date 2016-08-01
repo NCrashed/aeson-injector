@@ -169,6 +169,7 @@ import Data.Proxy
 import Data.Swagger 
 import GHC.Generics 
 import GHC.TypeLits 
+import Servant.Docs 
 
 import qualified Data.HashMap.Strict as H 
 import qualified Data.Text as T 
@@ -205,6 +206,12 @@ instance Bifunctor (WithField s) where
 -- The important note that 'ToJSON' and 'FromJSON' instances
 -- behaves as it is 'a' but with additional 'id' field.
 type WithId i a = WithField "id" i a 
+
+instance (ToSample a, ToSample b) => ToSample (WithField s a b) where 
+  toSamples _ = samples $ WithField <$> as <*> bs 
+    where 
+    as = snd <$> toSamples (Proxy :: Proxy a)
+    bs = snd <$> toSamples (Proxy :: Proxy b)
 
 -- | Note: the instance injects field only in 'Object' case.
 -- In other cases it forms a wrapper around the 'Value' produced 
@@ -286,6 +293,11 @@ instance Functor (WithFields a) where
 instance Bifunctor WithFields where 
   bimap fa fb (WithFields a b) = WithFields (fa a) (fb b)
 
+instance (ToSample a, ToSample b) => ToSample (WithFields a b) where 
+  toSamples _ = samples $ WithFields <$> as <*> bs 
+    where 
+    as = snd <$> toSamples (Proxy :: Proxy a)
+    bs = snd <$> toSamples (Proxy :: Proxy b)
 
 -- | Note: the instance injects field only in 'Object' case.
 -- In other cases it forms a wrapper around the 'Value' produced 
@@ -372,6 +384,11 @@ type OnlyId i = OnlyField "id" i
 
 instance Functor (OnlyField s) where 
   fmap f (OnlyField a) = OnlyField (f a)
+
+instance ToSample a => ToSample (OnlyField s a) where 
+  toSamples _ = samples $ OnlyField <$> as
+    where 
+    as = snd <$> toSamples (Proxy :: Proxy a)
 
 instance (KnownSymbol s, ToJSON a) => ToJSON (OnlyField s a) where 
   toJSON (OnlyField a) = object [ field .= a ]
