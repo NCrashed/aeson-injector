@@ -8,8 +8,10 @@ module Main where
 import Control.Lens hiding ((.=))
 import Control.Monad 
 import Data.Aeson as A 
+import Data.Aeson.Unit
 import Data.Aeson.WithField
 import Data.Proxy
+import Data.Scientific (scientific)
 import Data.Swagger
 import Data.Swagger.Internal.Schema
 import Data.Text
@@ -17,6 +19,8 @@ import Data.Text.Arbitrary
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck as QC
+
+import qualified Data.Vector as V 
 
 instance (Arbitrary a, Arbitrary b) => Arbitrary (WithField s a b) where 
   arbitrary = WithField <$> arbitrary <*> arbitrary
@@ -26,6 +30,17 @@ instance (Arbitrary a, Arbitrary b) => Arbitrary (WithFields a b) where
 
 instance Arbitrary a => Arbitrary (OnlyField s a) where 
   arbitrary = OnlyField <$> arbitrary
+
+instance Arbitrary Value where 
+  arbitrary = oneof [obj, arr]
+    where 
+    json = oneof [obj, arr, str, num, bl, nullg]
+    obj = object <$> listOf ((.=) <$> arbitrary <*> json) 
+    arr = Array . V.fromList <$> listOf json
+    str = String <$> arbitrary
+    num = fmap Number $ scientific <$> arbitrary <*> arbitrary
+    bl = Bool <$> arbitrary
+    nullg = pure Null 
 
 main :: IO ()
 main = defaultMain tests
@@ -38,6 +53,7 @@ qcProperties = testGroup "Properties" [
     withFieldProps
   , withFieldsProps
   , onlyFieldProps
+  , unitDataProps
   ]
 
 unitTests :: TestTree 
@@ -45,6 +61,7 @@ unitTests = testGroup "Unit tests" [
     withFieldTests
   , withFieldsTests
   , onlyFieldTests
+  , unitDataTests
   ]
 
 data TestObj = TestObj !Text 
@@ -314,6 +331,32 @@ onlyFieldTests = testGroup "OnlyField tests" [
         expected @=? (actual ^. properties)
     ]
 
+unitDataTests :: TestTree
+unitDataTests = testGroup "Unit tests" [
+    testsToJSON 
+  , testsFromJSON 
+  , testsToSchema
+  ]
+  where 
+  testsToJSON = testGroup "toJSON" [
+      testCase "Normal mode" $ do 
+        let expected = object [ ]
+        let actual = toJSON Unit
+        expected @=? actual
+    ]
+  testsFromJSON = testGroup "FromJSON" [
+      testCase "Normal mode" $ do 
+        let expected = Unit
+        let (A.Success (actual :: Unit)) = fromJSON $ object [ ]
+        expected @=? actual
+    ]
+  testsToSchema = testGroup "ToSchema" [
+      testCase "Normal mode" $ do 
+        let expected = NamedSchema Nothing $ mempty & type_ .~ SwaggerObject
+        let actual = toNamedSchema (Proxy :: Proxy Unit)
+        expected @=? actual
+    ]
+
 withFieldProps :: TestTree
 withFieldProps = testGroup "withField properties" [
     functorProps
@@ -343,3 +386,13 @@ onlyFieldProps = testGroup "onlyField properties" [
   where 
     functorProps = QC.testProperty "fmap id  ==  id" $  \(wf :: OnlyField "id" TestObj) -> 
       fmap id wf == wf
+
+unitDataProps :: TestTree 
+unitDataProps = testGroup "Unit properties" [
+    parseProps
+  ]
+  where 
+    parseProps = QC.testProperty "parseJSON Unit not fails" $ \(json :: Value) -> 
+      case fromJSON json of 
+        A.Success Unit -> True 
+        _ -> False 
