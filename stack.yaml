@@ -42,14 +42,15 @@ packages:
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps:
-#- aeson-1.0.0.0
-#- semigroups-0.18.2
-#- swagger2-2.1.1 # not building with 2.0.2
+- aeson-1.0.0.0
+- semigroups-0.18.2
+- swagger2-2.1.2.1
+- insert-ordered-containers-0.2.0.0
 
 # Override default flag values for local packages and extra-deps
-flags: {}
-#  semigroups:
-#    bytestring-builder: false
+flags: 
+  semigroups:
+    bytestring-builder: false
 
 # Extra package databases containing global packages
 extra-package-dbs: []
