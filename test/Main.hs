@@ -200,6 +200,10 @@ withFieldTests = testGroup "WithField tests" [
         let actual = toSchema (Proxy :: Proxy (WithField "a" TestObj String))
         expected @=? (actual ^. properties)
     , testCase "Overwrite mode" $ do 
+        let expected = [("a", Inline $ toSchema (Proxy :: Proxy Int))]
+        let actual = toSchema (Proxy :: Proxy (WithField "a" Int (OnlyField "a" Text)))
+        expected @=? (actual ^. properties)
+    , testCase "Overwrite mode: wrapper" $ do 
         let expected = [("value", Inline $ toSchema (Proxy :: Proxy Int))]
         let actual = toSchema (Proxy :: Proxy (WithField "value" Int Text))
         expected @=? (actual ^. properties)
