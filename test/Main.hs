@@ -256,6 +256,14 @@ withFieldsTests = testGroup "WithFields tests" [
         let expected = object ["field1" .= ("val1" :: Text) ]
         let actual = toJSON (WithFields (TestObj1 "val1" :: TestObj1 Text) (TestObj1 "val2" :: TestObj1 Text))
         expected @=? actual
+    , testCase "Overwrite mode: wrapper first" $ do 
+        let expected = object ["injected" .= ("val1" :: Text) ]
+        let actual = toJSON (WithFields ("val1" :: Text) (OnlyField "val2" :: OnlyField "injected" Text))
+        expected @=? actual
+    , testCase "Overwrite mode: wrapper second" $ do 
+        let expected = object ["value" .= ("val1" :: Text) ]
+        let actual = toJSON (WithFields (OnlyField "val1" :: OnlyField "value" Text) ("val2" :: Text))
+        expected @=? actual
     ]
   testsFromJSON = testGroup "fromJSON" [
       testCase "Inline mode" $ do 
@@ -286,6 +294,16 @@ withFieldsTests = testGroup "WithFields tests" [
         let A.Success (expected :: WithFields (TestObj1 Text) (TestObj1 Text)) = fromJSON $ object [
                 "field1" .= ("val1" :: Text) ]
         let actual = WithFields (TestObj1 "val1") (TestObj1 "val1")
+        expected @=? actual
+    , testCase "Overwrite mode: wrapper first" $ do 
+        let A.Success (expected :: WithFields Text (OnlyField "injected" Text)) = fromJSON $ object [
+                "injected" .= ("val1" :: Text) ]
+        let actual = WithFields "val1" (OnlyField "val1" :: OnlyField "injected" Text)
+        expected @=? actual
+    , testCase "Overwrite mode: wrapper second" $ do 
+        let A.Success (expected :: WithFields (OnlyField "value" Text) Text) = fromJSON $ object [
+                "value" .= ("val1" :: Text) ]
+        let actual = WithFields (OnlyField "val1" :: OnlyField "value" Text) "val1" 
         expected @=? actual
     ]
   testsToSchema = testGroup "toSchema" [

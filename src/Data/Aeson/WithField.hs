@@ -325,7 +325,9 @@ instance (ToJSON a, ToJSON b) => ToJSON (WithFields a b) where
         Object avs -> Object $ H.union avs bvs
         _ -> Object $ H.insert "injected" jsona bvs 
       _ -> case jsona of 
-        Object avs -> Object $ H.insert "value" jsonb avs
+        Object avs -> Object $ case H.lookup "value" avs of
+          Nothing -> H.insert "value" jsonb avs
+          Just _ -> avs
         _ -> object [
             "injected" .= jsona
           , "value" .= jsonb
