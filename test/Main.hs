@@ -117,6 +117,14 @@ withFieldTests = testGroup "WithField tests" [
               , "value" .= ("val":: Text)]
         let actual = toJSON (WithField (TestObj "key") "val" :: WithField "a" TestObj String)
         expected @=? actual
+    , testCase "Overwrite mode" $ do 
+        let expected = object ["a" .= (0 :: Int)]
+        let actual = toJSON (WithField 0 (OnlyField "val") :: WithField "a" Int (OnlyField "a" Text))
+        expected @=? actual
+    , testCase "Overwrite mode: wrapper" $ do 
+        let expected = object ["value" .= (0 :: Int)]
+        let actual = toJSON (WithField 0 "val" :: WithField "value" Int Text)
+        expected @=? actual
     ]
   testsFromJSON = testGroup "fromJSON" [
       testCase "Inline mode: atomic field" $ do 
@@ -334,6 +342,14 @@ withFieldsTests = testGroup "WithFields tests" [
     , testCase "Overwrite mode" $ do 
         let expected = [("field1", Inline $ toSchema (Proxy :: Proxy Text))]
         let actual = toSchema (Proxy :: Proxy (WithFields (TestObj1 Text) (TestObj1 Int)))
+        expected @=? (actual ^. properties)
+    , testCase "Overwrite mode: wrapper first" $ do 
+        let expected = [("injected", Inline $ toSchema (Proxy :: Proxy Text))]
+        let actual = toSchema (Proxy :: Proxy (WithFields Text (OnlyField "injected" Int)))
+        expected @=? (actual ^. properties)
+    , testCase "Overwrite mode: wrapper second" $ do 
+        let expected = [("value", Inline $ toSchema (Proxy :: Proxy Int))]
+        let actual = toSchema (Proxy :: Proxy (WithFields (OnlyField "value" Int) Text))
         expected @=? (actual ^. properties)
     ]
 

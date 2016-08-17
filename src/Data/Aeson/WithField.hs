@@ -227,8 +227,8 @@ instance (KnownSymbol s, ToJSON a, ToJSON b) => ToJSON (WithField s a b) where
     in case toJSON b of 
       Object vs -> Object $ H.insert field (toJSON a) vs 
       _ -> object [
-          field .= a 
-        , "value" .= jsonb
+          "value" .= jsonb
+        , field .= a 
         ]
 
 -- | Note: the instance tries to parse the json as object with 
