@@ -190,6 +190,8 @@ import qualified Data.Text as T
 --
 -- >>> encode (WithField "val" 42 :: WithField "injected" String Int)
 -- "{\"value\":42,\"injected\":\"val\"}"
+--
+-- `WithField s a b` always overwites field `s` in JSON produced by `b`.
 data WithField (s :: Symbol) a b = WithField !a !b 
   deriving (Generic, Eq, Show, Read)
 
@@ -317,6 +319,9 @@ instance (ToSample a, ToSample b) => ToSample (WithFields a b) where
 -- "injected" field, 'b' goes into "value" field:
 --
 -- > { "value": 42, "injected": [1, 2, 3] }
+--
+-- `WithFields a b` always overwites fields in JSON produced by `b` with fields from JSON 
+-- produced by `a`.
 instance (ToJSON a, ToJSON b) => ToJSON (WithFields a b) where 
   toJSON (WithFields a b) = let
     jsonb = toJSON b 
