@@ -349,10 +349,10 @@ instance (ToSchema a, ToSchema b) => ToSchema (WithFields a b) where
     NamedSchema na sa <- declareNamedSchema (Proxy :: Proxy a)
     let newName = combinedName <$> na <*> nb
     return . NamedSchema newName $ case (sa ^. type_ , sb ^. type_) of 
-      (SwaggerObject, SwaggerObject) -> sa <> sb 
-      (SwaggerObject, _) -> sa <> bwrapper sb
-      (_, SwaggerObject) -> awrapper sa <> sb
-      _ -> awrapper sa <> bwrapper sb
+      (SwaggerObject, SwaggerObject) -> sb <> sa 
+      (SwaggerObject, _) -> bwrapper sb <> sa
+      (_, SwaggerObject) -> sb <> awrapper sa
+      _ -> bwrapper sb <> awrapper sa
     where
     combinedName a b = "WithFields_" <> a <> "_" <> b
     awrapper nas = mempty

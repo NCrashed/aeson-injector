@@ -10,12 +10,14 @@ import Control.Monad
 import Data.Aeson as A 
 import Data.Aeson.Unit
 import Data.Aeson.WithField
+import Data.Monoid 
 import Data.Proxy
 import Data.Scientific (scientific)
 import Data.Swagger
 import Data.Swagger.Internal.Schema
 import Data.Text
 import Data.Text.Arbitrary
+import Data.Typeable 
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck as QC
@@ -181,22 +183,23 @@ withFieldTests = testGroup "WithField tests" [
         expected @=? (actual ^. properties)
     ]
 
-data TestObj1 = TestObj1 !Text 
+data TestObj1 a = TestObj1 !a 
   deriving (Eq, Show)
 
-instance ToJSON TestObj1 where 
+instance ToJSON a => ToJSON (TestObj1 a) where 
   toJSON (TestObj1 t) = object ["field1" .= t]
-instance FromJSON TestObj1 where 
+instance FromJSON a => FromJSON (TestObj1 a) where 
   parseJSON (Object o) = TestObj1 <$> o .: "field1"
   parseJSON _ = mzero
-instance ToSchema TestObj1 where 
+instance (ToSchema a, Typeable a) => ToSchema (TestObj1 a) where 
   declareNamedSchema prx = do 
-    t <- declareSchema (Proxy :: Proxy Text)
-    return $ NamedSchema (Just "TestObj1") $ mempty 
+    t <- declareSchema (Proxy :: Proxy a)
+    let nm = pack . show $ typeRep (Proxy :: Proxy a)
+    return $ NamedSchema (Just $ "TestObj1'" <> nm) $ mempty 
       & type_ .~ SwaggerObject
       & properties .~ [("field1", Inline t)]
       & required .~ ["field1"]
-instance Arbitrary TestObj1 where 
+instance Arbitrary a => Arbitrary (TestObj1 a) where 
   arbitrary = TestObj1 <$> arbitrary
 
 data TestObj2 = TestObj2 !Text 
@@ -229,7 +232,7 @@ withFieldsTests = testGroup "WithFields tests" [
         let expected = object [
                 "field1" .= ("val1" :: Text)
               , "field2" .= ("val2" :: Text) ]
-        let actual = toJSON (WithFields (TestObj1 "val1") (TestObj2 "val2"))
+        let actual = toJSON (WithFields (TestObj1 "val1" :: TestObj1 Text) (TestObj2 "val2"))
         expected @=? actual
     , testCase "Wrapper mode: first" $ do 
         let expected = object [
@@ -241,7 +244,7 @@ withFieldsTests = testGroup "WithFields tests" [
         let expected = object [
                 "field1" .= ("val1" :: Text)
               , "value" .= ("val2" :: Text) ]
-        let actual = toJSON (WithFields (TestObj1 "val1") ("val2" :: Text))
+        let actual = toJSON (WithFields (TestObj1 "val1" :: TestObj1 Text) ("val2" :: Text))
         expected @=? actual
     , testCase "Wrapper mode: both" $ do 
         let expected = object [
@@ -249,10 +252,14 @@ withFieldsTests = testGroup "WithFields tests" [
               , "value" .= ("val2" :: Text) ]
         let actual = toJSON (WithFields ("val1" :: Text) ("val2" :: Text))
         expected @=? actual
+    , testCase "Overwrite mode" $ do 
+        let expected = object ["field1" .= ("val1" :: Text) ]
+        let actual = toJSON (WithFields (TestObj1 "val1" :: TestObj1 Text) (TestObj1 "val2" :: TestObj1 Text))
+        expected @=? actual
     ]
   testsFromJSON = testGroup "fromJSON" [
       testCase "Inline mode" $ do 
-        let A.Success (expected :: WithFields TestObj1 TestObj2) = fromJSON $ object [
+        let A.Success (expected :: WithFields (TestObj1 Text) TestObj2) = fromJSON $ object [
                 "field1" .= ("val1" :: Text)
               , "field2" .= ("val2" :: Text)]
         let actual = WithFields (TestObj1 "val1") (TestObj2 "val2")
@@ -264,7 +271,7 @@ withFieldsTests = testGroup "WithFields tests" [
         let actual = WithFields ("val1" :: Text) (TestObj2 "val2")
         expected @=? actual
     , testCase "Wrapper mode: second" $ do 
-        let A.Success (expected :: WithFields TestObj1 Text) = fromJSON $ object [
+        let A.Success (expected :: WithFields (TestObj1 Text) Text) = fromJSON $ object [
                 "field1" .= ("val1" :: Text)
               , "value" .= ("val2" :: Text)]
         let actual = WithFields (TestObj1 "val1") ("val2" :: Text)
@@ -275,13 +282,18 @@ withFieldsTests = testGroup "WithFields tests" [
               , "value" .= ("val2" :: Text)]
         let actual = WithFields ("val1" :: Text) ("val2" :: Text)
         expected @=? actual
+    , testCase "Overwrite mode" $ do 
+        let A.Success (expected :: WithFields (TestObj1 Text) (TestObj1 Text)) = fromJSON $ object [
+                "field1" .= ("val1" :: Text) ]
+        let actual = WithFields (TestObj1 "val1") (TestObj1 "val1")
+        expected @=? actual
     ]
   testsToSchema = testGroup "toSchema" [
       testCase "Inline mode" $ do 
         let expected = [
                 ("field1", Inline $ toSchema (Proxy :: Proxy Text))
               , ("field2", Inline $ toSchema (Proxy :: Proxy Text))]
-        let actual = toSchema (Proxy :: Proxy (WithFields TestObj1 TestObj2))
+        let actual = toSchema (Proxy :: Proxy (WithFields (TestObj1 Text) TestObj2))
         expected @=? (actual ^. properties)
     , testCase "Wrapper mode: first" $ do 
         let expected = [
@@ -293,13 +305,17 @@ withFieldsTests = testGroup "WithFields tests" [
         let expected = [
                 ("field1", Inline $ toSchema (Proxy :: Proxy Text))
               , ("value", Inline $ toSchema (Proxy :: Proxy Text))]
-        let actual = toSchema (Proxy :: Proxy (WithFields TestObj1 Text))
+        let actual = toSchema (Proxy :: Proxy (WithFields (TestObj1 Text) Text))
         expected @=? (actual ^. properties)
     , testCase "Wrapper mode: both" $ do 
         let expected = [
                 ("injected", Inline $ toSchema (Proxy :: Proxy Text))
               , ("value", Inline $ toSchema (Proxy :: Proxy Text))]
         let actual = toSchema (Proxy :: Proxy (WithFields Text Text))
+        expected @=? (actual ^. properties)
+    , testCase "Overwrite mode" $ do 
+        let expected = [("field1", Inline $ toSchema (Proxy :: Proxy Text))]
+        let actual = toSchema (Proxy :: Proxy (WithFields (TestObj1 Text) (TestObj1 Int)))
         expected @=? (actual ^. properties)
     ]
 
@@ -374,9 +390,9 @@ withFieldsProps = testGroup "withFields properties" [
   , bifunctorProps
   ]
   where 
-    functorProps = QC.testProperty "fmap id  ==  id" $  \(wf :: WithFields TestObj1 TestObj2) -> 
+    functorProps = QC.testProperty "fmap id  ==  id" $  \(wf :: WithFields (TestObj1 Text) TestObj2) -> 
       fmap id wf == wf 
-    bifunctorProps = QC.testProperty "bimap id id == id" $  \(wf :: WithFields TestObj1 TestObj2) -> 
+    bifunctorProps = QC.testProperty "bimap id id == id" $  \(wf :: WithFields (TestObj1 Text) TestObj2) -> 
       bimap id id wf == wf 
 
 onlyFieldProps :: TestTree 
