@@ -157,6 +157,16 @@ withFieldTests = testGroup "WithField tests" [
               , "value" .= ("val":: Text)]
         let actual = WithField (TestObj "key") "val" :: WithField "a" TestObj String
         expected @=? actual
+    , testCase "Overwrite mode" $ do 
+        let A.Success (expected :: WithField "a" Int (OnlyField "a" Double)) = fromJSON $ object [
+                "a" .= (0 :: Int) ]
+        let actual = WithField 0 (OnlyField 0) :: WithField "a" Int (OnlyField "a" Double)
+        expected @=? actual
+    , testCase "Overwrite mode: wrapper" $ do 
+        let A.Success (expected :: WithField "value" Int Double) = fromJSON $ object [
+                "value" .= (0 :: Int) ]
+        let actual = WithField 0 0 :: WithField "value" Int Double
+        expected @=? actual
     ]
   testsToSchema = testGroup "toSchema" [
       testCase "Inline mode: atomic field" $ do 
@@ -188,6 +198,10 @@ withFieldTests = testGroup "WithField tests" [
                 ("a", Inline $ toSchema (Proxy :: Proxy TestObj))
               , ("value", Inline $ toSchema (Proxy :: Proxy String))]
         let actual = toSchema (Proxy :: Proxy (WithField "a" TestObj String))
+        expected @=? (actual ^. properties)
+    , testCase "Overwrite mode" $ do 
+        let expected = [("value", Inline $ toSchema (Proxy :: Proxy Int))]
+        let actual = toSchema (Proxy :: Proxy (WithField "value" Int Text))
         expected @=? (actual ^. properties)
     ]
 

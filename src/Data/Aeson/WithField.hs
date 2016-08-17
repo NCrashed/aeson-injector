@@ -172,6 +172,7 @@ import GHC.TypeLits
 import Servant.Docs 
 
 import qualified Data.HashMap.Strict as H 
+import qualified Data.List as L 
 import qualified Data.Text as T 
 
 -- | Injects field 'a' into 'b' with tag 's'. It has
@@ -262,10 +263,10 @@ instance (KnownSymbol s, ToSchema a, ToSchema b) => ToSchema (WithField s a b) w
       return $ NamedSchema (fmap (namePrefix <>) n) $ mempty
         & type_ .~ SwaggerObject
         & properties .~
-            [ (field, Inline indexSchema)
-            , ("value", Inline s)
+            [ ("value", Inline s)
+            , (field, Inline indexSchema)
             ]
-        & required .~ [ field, "value" ]
+        & required .~ (L.nub [ "value", field ])
     inline n s = do 
       indexSchema <- declareSchema (Proxy :: Proxy a)
       return $ NamedSchema (fmap (namePrefix <>) n) $ s
