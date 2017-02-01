@@ -1,3 +1,8 @@
+1.0.7.0
+=======
+
+- Push upper bounds for `aeson-1.1` and `servant-0.10`.
+
 1.0.6.0
 =======
 

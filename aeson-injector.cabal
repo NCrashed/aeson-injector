@@ -1,5 +1,5 @@
 name:                aeson-injector
-version:             1.0.5.1
+version:             1.0.7.0
 synopsis:            Injecting fields into aeson values
 description:         See README.md
 license:             MIT
