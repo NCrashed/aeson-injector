@@ -1,5 +1,5 @@
 name:                aeson-injector
-version:             1.0.7.0
+version:             1.0.8.0
 synopsis:            Injecting fields into aeson values
 description:         See README.md
 license:             MIT
@@ -31,7 +31,7 @@ library
 
   build-depends:
       base                 >= 4.7     && < 4.10
-    , aeson                >= 0.11    && < 1.2
+    , aeson                >= 0.11    && < 1.3
     , bifunctors           >= 5.2     && < 6
     , deepseq              >= 1.4     && < 2
     , lens                 >= 4.13    && < 5

@@ -42,9 +42,9 @@ packages:
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps:
-- aeson-1.1.0.0
+- aeson-1.2.0.0
 - http-api-data-0.3
-- insert-ordered-containers-0.2.0.0
+- insert-ordered-containers-0.2.1.0
 - natural-transformation-0.4
 - semigroups-0.18.2
 - servant-0.10
