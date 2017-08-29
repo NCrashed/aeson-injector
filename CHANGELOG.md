@@ -1,3 +1,8 @@
+1.0.9.0
+=======
+
+- Push upper bounds for `servant-docs-0.11`.
+
 1.0.8.0
 =======
 
