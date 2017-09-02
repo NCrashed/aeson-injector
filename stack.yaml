@@ -15,8 +15,8 @@
 # resolver:
 #  name: custom-snapshot
 #  location: "./custom-snapshot.yaml"
-resolver: lts-9.2
-#resolver: nightly-2016-07-26
+resolver: nightly-2017-09-02
+#resolver: nightly-2017-09-02
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -41,15 +41,7 @@ packages:
 
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
-extra-deps:
-- aeson-1.2.0.0
-- http-api-data-0.3
-- insert-ordered-containers-0.2.1.0
-- natural-transformation-0.4
-- semigroups-0.18.2
-- servant-0.11
-- servant-docs-0.11
-# - swagger2-2.1.2.1
+extra-deps: []
 
 # Override default flag values for local packages and extra-deps
 flags:
