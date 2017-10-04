@@ -5,6 +5,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 {-|
 Module      : Data.Aeson.WithField
@@ -165,6 +166,7 @@ import Control.Lens hiding ((.=))
 import Control.Monad
 import Data.Aeson
 import Data.Aeson.Types (typeMismatch)
+import Data.Hashable
 import Data.Monoid
 import Data.Proxy
 import Data.Swagger
@@ -172,6 +174,7 @@ import GHC.Generics
 import GHC.TypeLits
 import Servant.Docs
 
+import qualified Data.Foldable as F
 import qualified Data.HashMap.Strict as H
 import qualified Data.List as L
 import qualified Data.Text as T
@@ -346,10 +349,24 @@ instance (ToJSON a, ToJSON b) => ToJSON (WithFields a b) where
 -- | Note: the instance tries to parse the json as object with
 -- additional field value, if it fails it assumes that it is a
 -- wrapper produced by corresponding 'ToJSON' instance.
-instance (FromJSON a, FromJSON b) => FromJSON (WithFields a b) where
-  parseJSON val@(Object o) = WithFields
-    <$> (parseJSON val <|> o .: "injected")
-    <*> (parseJSON val <|> o .: "value")
+--
+-- Note: The instance tries to parse the `b` part without fields of `a` at first time.
+-- If it fails, the instance retries with presence of a's fields.
+instance (ToJSON a, FromJSON a, FromJSON b) => FromJSON (WithFields a b) where
+  parseJSON val@(Object o) = do
+    (a, isInjected) <- ((, False) <$> parseJSON val) <|> ((, True) <$> (o .: "injected"))
+    let o' = (if isInjected then H.delete "injected" else deleteAll (extractFields a)) o
+    b <-  (parseJSON (Object o') <|> o' .: "value")
+      <|> (parseJSON val <|> o .: "value")
+    pure $ WithFields a b
+    where
+      deleteAll :: (Eq k, Hashable k) => [k] -> H.HashMap k v -> H.HashMap k v
+      deleteAll ks m = F.foldl' (flip H.delete) m ks
+
+      extractFields :: ToJSON a => a -> [T.Text]
+      extractFields a = case toJSON a of
+        Object vs -> H.keys vs
+        _ -> []
   parseJSON wat = typeMismatch "Expected JSON Object" wat
 
 -- | Note: the instance tries to generate schema of the json as object with
