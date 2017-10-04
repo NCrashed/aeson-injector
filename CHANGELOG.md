@@ -1,3 +1,9 @@
+1.1.0.0
+=======
+
+- Fix #1 bug.
+- `FromJSON (WithFields a b)` now requires `ToJSON a` to catch fields that should be removed from `b` JSON object before parsing.
+
 1.0.10.0
 ========
 

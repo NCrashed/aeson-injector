@@ -352,6 +352,9 @@ instance (ToJSON a, ToJSON b) => ToJSON (WithFields a b) where
 --
 -- Note: The instance tries to parse the `b` part without fields of `a` at first time.
 -- If it fails, the instance retries with presence of a's fields.
+--
+-- The implementation requires `ToJSON a` to catch fields of `a` and it is assumed
+-- that `fromJSON . toJSON === id` for `a`.
 instance (ToJSON a, FromJSON a, FromJSON b) => FromJSON (WithFields a b) where
   parseJSON val@(Object o) = do
     (a, isInjected) <- ((, False) <$> parseJSON val) <|> ((, True) <$> (o .: "injected"))
