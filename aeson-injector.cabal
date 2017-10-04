@@ -50,6 +50,7 @@ test-suite test-aeson-injector
       base
     , aeson
     , aeson-injector
+    , containers
     , HUnit >= 1.3
     , lens
     , QuickCheck >= 2.8.2
