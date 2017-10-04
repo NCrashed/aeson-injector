@@ -216,6 +216,7 @@ withFieldTests = testGroup "WithField tests" [
         let val = WithField 10 (Map.fromList [(True, 20), (False, 30)]) :: WithField "foo" Int (Map.Map Bool Int)
         Right val @=? (parseEither parseJSON . toJSON $ val)
     ]
+
 data TestObj1 a = TestObj1 !a
   deriving (Eq, Show)
 
@@ -258,6 +259,7 @@ withFieldsTests = testGroup "WithFields tests" [
     testsToJSON
   , testsFromJSON
   , testsToSchema
+  , testsRoundtip
   ]
   where
   testsToJSON = testGroup "toJSON" [
@@ -376,6 +378,14 @@ withFieldsTests = testGroup "WithFields tests" [
         let expected = [("value", Inline $ toSchema (Proxy :: Proxy Int))]
         let actual = toSchema (Proxy :: Proxy (WithFields (OnlyField "value" Int) Text))
         expected @=? (actual ^. properties)
+    ]
+  testsRoundtip = testGroup "roundtip" [
+      testCase "Map Bool Int, one field" $ do -- Issue #1
+        let val = WithFields (TestObj1 10) (Map.fromList [(True, 20), (False, 30)]) :: WithFields (TestObj1 Int) (Map.Map Bool Int)
+        Right val @=? (parseEither parseJSON . toJSON $ val)
+    , testCase "Map Bool Int, two fields" $ do -- Issue #1
+        let val = WithFields (WithFields (TestObj1 10) (TestObj2 "Blah")) (Map.fromList [(True, 20), (False, 30)]) :: WithFields (WithFields (TestObj1 Int) TestObj2) (Map.Map Bool Int)
+        Right val @=? (parseEither parseJSON . toJSON $ val)
     ]
 
 onlyFieldTests :: TestTree
