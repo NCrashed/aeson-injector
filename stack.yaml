@@ -1,9 +1,11 @@
-resolver: lts-9.6
-#resolver: nightly-2017-10-04
+resolver: lts-12.7
 
 packages:
 - '.'
-extra-deps: []
+
+extra-deps:
+- swagger2-2.3
+
 
 # system-ghc: true
 # nix:
