@@ -32,7 +32,7 @@ library
       Data.Aeson.WithField
 
   build-depends:
-      base                 >= 4.7     && < 4.12
+      base                 >= 4.7     && < 4.13
     , aeson                >= 0.11    && < 1.5
     , bifunctors           >= 5.2     && < 6
     , deepseq              >= 1.4     && < 2
