@@ -8,9 +8,9 @@ Maintainer  : ncrashed@gmail.com
 Stability   : experimental
 Portability : Portable
 
-Common problem in REST interfaces when you need to return nothing as result, 
+Common problem in REST interfaces when you need to return nothing as result,
 usage of `()` will produce `[]` JSON. That causes problems in some JSON parsers
-in other languages. 
+in other languages.
 
 So, `Unit` serialises into empty JSON object:
 
@@ -20,12 +20,12 @@ So, `Unit` serialises into empty JSON object:
 -}
 module Data.Aeson.Unit(
     Unit(..)
-  ) where 
+  ) where
 
 import Control.Lens
-import Data.Aeson 
+import Data.Aeson
 import Data.Swagger
-import GHC.Generics 
+import GHC.Generics
 
 -- | Data type that serialise into empty object in aeson
 --
@@ -39,14 +39,14 @@ import GHC.Generics
 data Unit = Unit
   deriving (Generic, Eq, Show, Read, Enum, Bounded)
 
-instance ToJSON Unit where 
+instance ToJSON Unit where
   toJSON _ = object []
 
--- | Always a success parse 
-instance FromJSON Unit where 
+-- | Always a success parse
+instance FromJSON Unit where
   parseJSON _ = pure Unit
 
-instance ToSchema Unit where 
-  declareNamedSchema _ = do 
+instance ToSchema Unit where
+  declareNamedSchema _ = do
     return $ NamedSchema Nothing $ mempty
-      & type_ .~ SwaggerObject
+      & type_ .~ Just SwaggerObject

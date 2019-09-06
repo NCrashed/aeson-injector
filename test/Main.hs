@@ -80,7 +80,7 @@ instance ToSchema TestObj where
   declareNamedSchema prx = do
     t <- declareSchema (Proxy :: Proxy Text)
     return $ NamedSchema (Just "TestObj") $ mempty
-      & type_ .~ SwaggerObject
+      & type_ .~ Just SwaggerObject
       & properties .~ [("field", Inline t)]
       & required .~ ["field"]
 instance Arbitrary TestObj where
@@ -230,7 +230,7 @@ instance (ToSchema a, Typeable a) => ToSchema (TestObj1 a) where
     t <- declareSchema (Proxy :: Proxy a)
     let nm = pack . show $ typeRep (Proxy :: Proxy a)
     return $ NamedSchema (Just $ "TestObj1'" <> nm) $ mempty
-      & type_ .~ SwaggerObject
+      & type_ .~ Just SwaggerObject
       & properties .~ [("field1", Inline t)]
       & required .~ ["field1"]
 instance Arbitrary a => Arbitrary (TestObj1 a) where
@@ -248,7 +248,7 @@ instance ToSchema TestObj2 where
   declareNamedSchema prx = do
     t <- declareSchema (Proxy :: Proxy Text)
     return $ NamedSchema (Just "TestObj2") $ mempty
-      & type_ .~ SwaggerObject
+      & type_ .~ Just SwaggerObject
       & properties .~ [("field2", Inline t)]
       & required .~ ["field2"]
 instance Arbitrary TestObj2 where
@@ -437,7 +437,7 @@ unitDataTests = testGroup "Unit tests" [
     ]
   testsToSchema = testGroup "ToSchema" [
       testCase "Normal mode" $ do
-        let expected = NamedSchema Nothing $ mempty & type_ .~ SwaggerObject
+        let expected = NamedSchema Nothing $ mempty & type_ .~ Just SwaggerObject
         let actual = toNamedSchema (Proxy :: Proxy Unit)
         expected @=? actual
     ]

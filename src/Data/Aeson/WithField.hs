@@ -262,7 +262,7 @@ instance (KnownSymbol s, FromJSON a, FromJSON b) => FromJSON (WithField s a b) w
 instance (KnownSymbol s, ToSchema a, ToSchema b) => ToSchema (WithField s a b) where
   declareNamedSchema _ = do
     NamedSchema n s <- declareNamedSchema (Proxy :: Proxy b)
-    if s ^. type_ == SwaggerObject then inline n s
+    if s ^. type_ == Just SwaggerObject then inline n s
       else wrapper n s
     where
     field = T.pack $ symbolVal (Proxy :: Proxy s)
@@ -270,7 +270,7 @@ instance (KnownSymbol s, ToSchema a, ToSchema b) => ToSchema (WithField s a b) w
     wrapper n s = do
       indexSchema <- declareSchema (Proxy :: Proxy a)
       return $ NamedSchema (fmap (namePrefix <>) n) $ mempty
-        & type_ .~ SwaggerObject
+        & type_ .~ Just SwaggerObject
         & properties .~
             [ ("value", Inline s)
             , (field, Inline indexSchema)
@@ -381,18 +381,18 @@ instance (ToSchema a, ToSchema b) => ToSchema (WithFields a b) where
     NamedSchema na sa <- declareNamedSchema (Proxy :: Proxy a)
     let newName = combinedName <$> na <*> nb
     return . NamedSchema newName $ case (sa ^. type_ , sb ^. type_) of
-      (SwaggerObject, SwaggerObject) -> sb <> sa
-      (SwaggerObject, _) -> bwrapper sb <> sa
-      (_, SwaggerObject) -> sb <> awrapper sa
+      (Just SwaggerObject, Just SwaggerObject) -> sb <> sa
+      (Just SwaggerObject, _) -> bwrapper sb <> sa
+      (_, Just SwaggerObject) -> sb <> awrapper sa
       _ -> bwrapper sb <> awrapper sa
     where
     combinedName a b = "WithFields_" <> a <> "_" <> b
     awrapper nas = mempty
-      & type_ .~ SwaggerObject
+      & type_ .~ Just SwaggerObject
       & properties .~ [ ("injected", Inline nas) ]
       & required .~ [ "injected" ]
     bwrapper nbs = mempty
-      & type_ .~ SwaggerObject
+      & type_ .~ Just SwaggerObject
       & properties .~ [ ("value", Inline nbs) ]
       & required .~ [ "value" ]
 
@@ -437,7 +437,7 @@ instance (KnownSymbol s, ToSchema a) => ToSchema (OnlyField s a) where
   declareNamedSchema _ = do
     NamedSchema an as <- declareNamedSchema (Proxy :: Proxy a)
     return $ NamedSchema (fmap ("OnlyField" <>) an) $ mempty
-      & type_ .~ SwaggerObject
+      & type_ .~ Just SwaggerObject
       & properties .~ [(field, Inline as)]
       & required .~ [field]
     where
