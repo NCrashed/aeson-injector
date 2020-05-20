@@ -1,5 +1,10 @@
-1.1.2.0 
-======= 
+1.1.3.0
+=======
+
+- Bump upper version of base to `4.14`.
+
+1.1.2.0
+=======
 
 - Move to `swagger2-2.4` and `ghc-8.6`.
 
