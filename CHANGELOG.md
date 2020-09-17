@@ -1,3 +1,8 @@
+1.1.4.0
+=======
+
+- Disambiguate OnlyField schema with for one type (https://github.com/NCrashed/aeson-injector/pull/7)
+
 1.1.3.0
 =======
 
