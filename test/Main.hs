@@ -15,6 +15,7 @@ import Data.Monoid
 import Data.Proxy
 import Data.Scientific (scientific)
 import Data.Swagger
+import Data.Swagger.Lens
 import Data.Swagger.Internal.Schema
 import Data.Text
 import Data.Text.Arbitrary
@@ -414,6 +415,10 @@ onlyFieldTests = testGroup "OnlyField tests" [
                 ("a", Inline $ toSchema (Proxy :: Proxy Int)) ]
         let actual = toSchema (Proxy :: Proxy (OnlyField "a" Int))
         expected @=? (actual ^. properties)
+    , testCase "Distinct names" $ do
+        let idA = toNamedSchema (Proxy :: Proxy (OnlyField "idA" TestObj))
+        let idB = toNamedSchema (Proxy :: Proxy (OnlyField "idB" TestObj))
+        idA ^. name /= idB ^. name @? "Different OnlyField fields produce schemas with equal names"
     ]
 
 unitDataTests :: TestTree
