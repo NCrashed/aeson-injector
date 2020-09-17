@@ -436,7 +436,8 @@ instance (KnownSymbol s, FromJSON a) => FromJSON (OnlyField s a) where
 instance (KnownSymbol s, ToSchema a) => ToSchema (OnlyField s a) where
   declareNamedSchema _ = do
     NamedSchema an as <- declareNamedSchema (Proxy :: Proxy a)
-    return $ NamedSchema (fmap ("OnlyField" <>) an) $ mempty
+    let namePrefix = "OnlyField '" <> field <> "' "
+    return $ NamedSchema (fmap (namePrefix <>) an) $ mempty
       & type_ .~ Just SwaggerObject
       & properties .~ [(field, Inline as)]
       & required .~ [field]
