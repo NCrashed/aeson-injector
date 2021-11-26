@@ -74,7 +74,7 @@ The library also has more general data type `WithFields a b` that injects fields
 
 ``` haskell
 data NewsPatch = NewsPatch {
-  taggs :: [Text]
+  tags :: [Text]
 , rating :: Double
 }
 $(deriveJSON defaultOptions ''NewsPatch) 
