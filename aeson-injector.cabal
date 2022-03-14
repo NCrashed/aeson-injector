@@ -29,10 +29,12 @@ library
   exposed-modules:
       Data.Aeson.Unit
       Data.Aeson.WithField
+      Data.Aeson.WithField.Internal
 
   build-depends:
       base                 >= 4.7     && < 4.17
     , aeson                >= 0.11    && < 1.6
+    , attoparsec           >= 0.14    && < 0.15
     , bifunctors           >= 5.2     && < 6
     , deepseq              >= 1.4     && < 2
     , hashable             >= 1.0     && < 2.0

@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -166,6 +167,7 @@ import Control.Lens hiding ((.=))
 import Control.Monad
 import Data.Aeson
 import Data.Aeson.Types (typeMismatch)
+import Data.Aeson.WithField.Internal
 import Data.Hashable
 import Data.Monoid
 import Data.Proxy
@@ -245,7 +247,7 @@ instance (KnownSymbol s, ToJSON a, ToJSON b) => ToJSON (WithField s a b) where
 -- Note: The instance tries to parse the `b` part without `s` field at first time.
 -- If it fails, the instance retries with presence of the `s` field.
 instance (KnownSymbol s, FromJSON a, FromJSON b) => FromJSON (WithField s a b) where
-  parseJSON val@(Object o) = injected <|> wrapper
+  parseJSON val@(Object o) = injected `mplus0` wrapper
     where
     field = T.pack $ symbolVal (Proxy :: Proxy s)
     injected = WithField
@@ -357,10 +359,10 @@ instance (ToJSON a, ToJSON b) => ToJSON (WithFields a b) where
 -- that `fromJSON . toJSON === id` for `a`.
 instance (ToJSON a, FromJSON a, FromJSON b) => FromJSON (WithFields a b) where
   parseJSON val@(Object o) = do
-    (a, isInjected) <- ((, False) <$> parseJSON val) <|> ((, True) <$> (o .: "injected"))
+    (a, isInjected) <- ((, False) <$> parseJSON val) `mplus0` ((, True) <$> (o .: "injected"))
     let o' = (if isInjected then H.delete "injected" else deleteAll (extractFields a)) o
-    b <-  (parseJSON (Object o') <|> o' .: "value")
-      <|> (parseJSON val <|> o .: "value")
+    b <-  ((parseJSON (Object o')) `mplus0` (o' .: "value"))
+      <|> ((parseJSON val) `mplus0` (o .: "value"))
     pure $ WithFields a b
     where
       deleteAll :: (Eq k, Hashable k) => [k] -> H.HashMap k v -> H.HashMap k v
@@ -443,3 +445,4 @@ instance (KnownSymbol s, ToSchema a) => ToSchema (OnlyField s a) where
       & required .~ [field]
     where
     field = T.pack $ symbolVal (Proxy :: Proxy s)
+
