@@ -1,3 +1,8 @@
+1.2.0.0
+=======
+
+- Fixes issue #3 with unexpected errors when injected value fails to parse.
+
 1.1.6.0
 =======
 
