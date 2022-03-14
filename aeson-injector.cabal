@@ -14,6 +14,7 @@ tested-with:
     GHC == 8.4.3
   , GHC == 8.6.5
   , GHC == 8.8.1
+  , GHC == 8.10.7
 extra-source-files:
   README.md
   CHANGELOG.md
@@ -30,15 +31,15 @@ library
       Data.Aeson.WithField
 
   build-depends:
-      base                 >= 4.7     && < 4.14
+      base                 >= 4.7     && < 4.17
     , aeson                >= 0.11    && < 1.6
     , bifunctors           >= 5.2     && < 6
     , deepseq              >= 1.4     && < 2
     , hashable             >= 1.0     && < 2.0
-    , lens                 >= 4.13    && < 5
-    , servant-docs         >= 0.7     && < 0.12
+    , lens                 >= 4.13    && < 5.2
+    , servant-docs         >= 0.7     && < 0.13
     , swagger2             >= 2.4     && < 3.0
-    , text                 >= 1.2     && < 2.0
+    , text                 >= 1.2     && < 2.1
     , unordered-containers >= 0.2.7   && < 0.3
 
 test-suite test-aeson-injector
