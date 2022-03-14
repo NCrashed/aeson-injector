@@ -1,3 +1,8 @@
+1.1.6.0
+=======
+
+- Relax bounds to support GHC 8.10
+
 1.1.5.0
 =======
 
