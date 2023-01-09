@@ -36,17 +36,6 @@ instance (Arbitrary a, Arbitrary b) => Arbitrary (WithFields a b) where
 instance Arbitrary a => Arbitrary (OnlyField s a) where
   arbitrary = OnlyField <$> arbitrary
 
-instance Arbitrary Value where
-  arbitrary = oneof [obj, arr]
-    where
-    json = oneof [obj, arr, str, num, bl, nullg]
-    obj = object <$> listOf ((.=) <$> arbitrary <*> json)
-    arr = Array . V.fromList <$> listOf json
-    str = String <$> arbitrary
-    num = fmap Number $ scientific <$> arbitrary <*> arbitrary
-    bl = Bool <$> arbitrary
-    nullg = pure Null
-
 main :: IO ()
 main = defaultMain tests
 
