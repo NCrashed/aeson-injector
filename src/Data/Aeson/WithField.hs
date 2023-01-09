@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -7,6 +8,7 @@
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-|
 Module      : Data.Aeson.WithField
@@ -167,6 +169,8 @@ import Control.Lens hiding ((.=))
 import Control.Monad
 import Data.Aeson
 import Data.Aeson.Types (typeMismatch)
+import qualified Data.Aeson.Key as Key
+import qualified Data.Aeson.KeyMap as KM
 import Data.Aeson.WithField.Internal
 import Data.Hashable
 import Data.Monoid
@@ -177,7 +181,6 @@ import GHC.TypeLits
 import Servant.Docs
 
 import qualified Data.Foldable as F
-import qualified Data.HashMap.Strict as H
 import qualified Data.List as L
 import qualified Data.Text as T
 
@@ -232,9 +235,9 @@ instance (ToSample a, ToSample b) => ToSample (WithField s a b) where
 instance (KnownSymbol s, ToJSON a, ToJSON b) => ToJSON (WithField s a b) where
   toJSON (WithField a b) = let
     jsonb = toJSON b
-    field = T.pack $ symbolVal (Proxy :: Proxy s)
+    field = mkFieldName @s
     in case toJSON b of
-      Object vs -> Object $ H.insert field (toJSON a) vs
+      Object vs -> Object $ KM.insert field (toJSON a) vs
       _ -> object [
           "value" .= jsonb
         , field .= a
@@ -249,10 +252,10 @@ instance (KnownSymbol s, ToJSON a, ToJSON b) => ToJSON (WithField s a b) where
 instance (KnownSymbol s, FromJSON a, FromJSON b) => FromJSON (WithField s a b) where
   parseJSON val@(Object o) = injected `mplus0` wrapper
     where
-    field = T.pack $ symbolVal (Proxy :: Proxy s)
+    field = mkFieldName @s
     injected = WithField
       <$> o .: field
-      <*> (parseJSON (Object $ H.delete field o) <|> parseJSON val)
+      <*> (parseJSON (Object $ KM.delete field o) <|> parseJSON val)
     wrapper = WithField
       <$> o .: field
       <*> o .: "value"
@@ -337,11 +340,11 @@ instance (ToJSON a, ToJSON b) => ToJSON (WithFields a b) where
     jsona = toJSON a
     in case jsonb of
       Object bvs -> case jsona of
-        Object avs -> Object $ H.union avs bvs
-        _ -> Object $ H.insert "injected" jsona bvs
+        Object avs -> Object $ KM.union avs bvs
+        _ -> Object $ KM.insert "injected" jsona bvs
       _ -> case jsona of
-        Object avs -> Object $ case H.lookup "value" avs of
-          Nothing -> H.insert "value" jsonb avs
+        Object avs -> Object $ case KM.lookup "value" avs of
+          Nothing -> KM.insert "value" jsonb avs
           Just _ -> avs
         _ -> object [
             "injected" .= jsona
@@ -360,17 +363,17 @@ instance (ToJSON a, ToJSON b) => ToJSON (WithFields a b) where
 instance (ToJSON a, FromJSON a, FromJSON b) => FromJSON (WithFields a b) where
   parseJSON val@(Object o) = do
     (a, isInjected) <- ((, False) <$> parseJSON val) `mplus0` ((, True) <$> (o .: "injected"))
-    let o' = (if isInjected then H.delete "injected" else deleteAll (extractFields a)) o
+    let o' = (if isInjected then KM.delete "injected" else deleteAll (extractFields a)) o
     b <-  ((parseJSON (Object o')) `mplus0` (o' .: "value"))
       <|> ((parseJSON val) `mplus0` (o .: "value"))
     pure $ WithFields a b
     where
-      deleteAll :: (Eq k, Hashable k) => [k] -> H.HashMap k v -> H.HashMap k v
-      deleteAll ks m = F.foldl' (flip H.delete) m ks
+      deleteAll :: [Key.Key] -> KM.KeyMap v -> KM.KeyMap v
+      deleteAll ks m = F.foldl' (flip KM.delete) m ks
 
-      extractFields :: ToJSON a => a -> [T.Text]
+      extractFields :: ToJSON a => a -> [Key.Key]
       extractFields a = case toJSON a of
-        Object vs -> H.keys vs
+        Object vs -> KM.keys vs
         _ -> []
   parseJSON wat = typeMismatch "Expected JSON Object" wat
 
@@ -425,24 +428,23 @@ instance ToSample a => ToSample (OnlyField s a) where
     as = snd <$> toSamples (Proxy :: Proxy a)
 
 instance (KnownSymbol s, ToJSON a) => ToJSON (OnlyField s a) where
-  toJSON (OnlyField a) = object [ field .= a ]
-    where
-    field = T.pack $ symbolVal (Proxy :: Proxy s)
+  toJSON (OnlyField a) = object [ mkFieldName @s .= a ]
 
 instance (KnownSymbol s, FromJSON a) => FromJSON (OnlyField s a) where
-  parseJSON (Object o) = OnlyField <$> o .: field
-    where
-    field = T.pack $ symbolVal (Proxy :: Proxy s)
+  parseJSON (Object o) = OnlyField <$> o .: (mkFieldName @s)
   parseJSON _ = mzero
 
 instance (KnownSymbol s, ToSchema a) => ToSchema (OnlyField s a) where
   declareNamedSchema _ = do
     NamedSchema an as <- declareNamedSchema (Proxy :: Proxy a)
-    let namePrefix = "OnlyField '" <> field <> "' "
+    let namePrefix = "OnlyField '" <> Key.toText field <> "' "
     return $ NamedSchema (fmap (namePrefix <>) an) $ mempty
       & type_ .~ Just SwaggerObject
-      & properties .~ [(field, Inline as)]
-      & required .~ [field]
+      & properties .~ [(Key.toText field, Inline as)]
+      & required .~ [Key.toText field]
     where
-    field = T.pack $ symbolVal (Proxy :: Proxy s)
+    field = mkFieldName @s
+
+mkFieldName :: forall s . KnownSymbol s => Key.Key
+mkFieldName = Key.fromString $ symbolVal (Proxy :: Proxy s)
 

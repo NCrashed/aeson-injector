@@ -1,3 +1,4 @@
 .stack-work
 *.sublime-workspace
 dist-newstyle
+cabal.project.local
